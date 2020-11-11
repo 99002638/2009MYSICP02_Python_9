@@ -95,3 +95,71 @@ def pyconChat(client, username, groupname):
 						del groups[groupname].waitClients[usernameToApprove]
 					print("Member Approved:",usernameToApprove,"| Group:",groupname)
 					client.send(b"User has been added to the group.")
+                                   else:
+					client.send(b"The user has not requested to join.")
+			else:
+				client.send(b"You're not an admin.")
+		elif msg == "/disconnect":
+			client.send(b"/disconnect")
+			client.recv(1024).decode("utf-8")
+			groups[groupname].disconnect(username)
+			print("User Disconnected:",username,"| Group:",groupname)
+			break
+		elif msg == "/messageSend":
+			client.send(b"/messageSend")
+			message = client.recv(1024).decode("utf-8")
+			groups[groupname].sendMessage(message,username)
+		elif msg == "/waitDisconnect":
+			client.send(b"/waitDisconnect")
+			del groups[groupname].waitClients[username]
+			print("Waiting Client:",username,"Disconnected")
+			break
+		elif msg == "/allMembers":
+			client.send(b"/allMembers")
+			client.recv(1024).decode("utf-8")
+			client.send(pickle.dumps(groups[groupname].allMembers))
+		elif msg == "/onlineMembers":
+			client.send(b"/onlineMembers")
+			client.recv(1024).decode("utf-8")
+			client.send(pickle.dumps(groups[groupname].onlineMembers))
+		elif msg == "/changeAdmin":
+			client.send(b"/changeAdmin")
+			client.recv(1024).decode("utf-8")
+			if username == groups[groupname].admin:
+				client.send(b"/proceed")
+				newAdminUsername = client.recv(1024).decode("utf-8")
+				if newAdminUsername in groups[groupname].allMembers:
+					groups[groupname].admin = newAdminUsername
+					print("New Admin:",newAdminUsername,"| Group:",groupname)
+					client.send(b"Your adminship is now transferred to the specified user.")
+				else:
+					client.send(b"The user is not a member of this group.")
+			else:
+				client.send(b"You're not an admin.")
+		elif msg == "/whoAdmin":
+			client.send(b"/whoAdmin")
+			groupname = client.recv(1024).decode("utf-8")
+			client.send(bytes("Admin: "+groups[groupname].admin,"utf-8"))
+		elif msg == "/kickMember":
+			client.send(b"/kickMember")
+			client.recv(1024).decode("utf-8")
+			if username == groups[groupname].admin:
+				client.send(b"/proceed")
+				usernameToKick = client.recv(1024).decode("utf-8")
+				if usernameToKick in groups[groupname].allMembers:
+					groups[groupname].allMembers.remove(usernameToKick)
+					if usernameToKick in groups[groupname].onlineMembers:
+						groups[groupname].clients[usernameToKick].send(b"/kicked")
+						groups[groupname].onlineMembers.remove(usernameToKick)
+						del groups[groupname].clients[usernameToKick]
+					print("User Removed:",usernameToKick,"| Group:",groupname)
+					client.send(b"The specified user is removed from the group.")
+				else:
+					client.send(b"The user is not a member of this group.")
+			else:
+				client.send(b"You're not an admin.")
+		else:
+			print("UNIDENTIFIED COMMAND:",msg)
+			
+if __name__ == "__main__":
+	main()
